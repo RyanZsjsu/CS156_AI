@@ -5,10 +5,10 @@ The class hierarchies are as follows:
 
 Object ## A physical object that can exist in an environment
     Agent
-        Wumpus
+        
         RandomAgent
         ReflexVacuumAgent
-        ...
+        SimpleReflexAgent
     Dirt
     Wall
     ...
@@ -93,17 +93,6 @@ class TableDrivenAgent(Agent):
             action = table.get(tuple(percepts))
             return action
         self.program = program
-
-
-# class RandomAgent(Agent):
-#     "An agent that chooses an action at random, ignoring all percepts."
-#     def __init__(self, actions):
-#         Agent.__init__(self)
-#         self.program = lambda percept: random.choice(actions)
-
-# def RandomVacuumAgent():
-#     "Randomly choose one of the actions from the vaccum environment."
-#     return RandomAgent(['Right', 'Left', 'Suck', 'NoOp'])
 
 
 #______________________________________________________________________________
@@ -203,17 +192,23 @@ class Environment:
 #______________________________________________________________________________
 ## Vacuum environment 
 
-class TrivialVacuumEnvironment(Environment): #PROFESSOR SAID TO USE THIS ENVIRONMENT FOR ASSIGNMENT
+class TrivialVacuumEnvironment(Environment): #PROFESSOR SAID WE CAN USE THIS ENVIRONMENT FOR ASSIGNMENT
     """This environment has two locations, A and B. Each can be Dirty or Clean.
     The agent perceives its location and the location's status. This serves as
     an example of how to implement a simple Environment."""
 
-    countOfMoves = 0
+    
 
-    def __init__(self):
+    def __init__(self, loc_AStatus, loc_BStatus, initLocation, roomsize):
         Environment.__init__(self)
-        self.status = {loc_A:random.choice(['Clean', 'Dirty']),
-                       loc_B:random.choice(['Clean', 'Dirty'])}
+        self.status = {loc_A: loc_AStatus, loc_B: loc_BStatus}
+        self.roomsize = roomsize
+        if initLocation == 'A':
+            self.initLocation = loc_A
+        elif initLocation == 'B':
+            self.initLocation = loc_B
+        #self.status = {loc_A:random.choice(['Clean', 'Dirty']),
+         #              loc_B:random.choice(['Clean', 'Dirty'])}
         
     def percept(self, agent):
         "Returns the agent's location, and the location status (Dirty/Clean)."
@@ -232,16 +227,16 @@ class TrivialVacuumEnvironment(Environment): #PROFESSOR SAID TO USE THIS ENVIRON
             agent.location = loc_A
             agent.performance -= 1
             
-            print(agent.performance)
+            print("Agent's current performance:%s" % agent.performance)
         elif action == 'Suck':
             if self.status[agent.location] == 'Dirty':
                 agent.performance += 10
-                print(agent.performance)
+                print("Agent's current performance:%s" % agent.performance)
             self.status[agent.location] = 'Clean'
 
     def default_location(self, object):
-        "Agents start in either location at random."
-        return random.choice([loc_A, loc_B])
+        "Agents starts in this location"
+        return self.initLocation
 
 
     #def displayMetrics():
@@ -250,66 +245,46 @@ class TrivialVacuumEnvironment(Environment): #PROFESSOR SAID TO USE THIS ENVIRON
 class Dirt(Object): pass
 class Wall(Object): pass
 
-def interpret_input(percept):
-        location, spotStatus = percept
-        if location == loc_A and spotStatus =='Clean':
-            return '1' #1 means 'RIGHT'
-        elif location == loc_A and spotStatus =='Dirty':
-            return '2' #2 means 'SUCK'
-        elif location == loc_B and spotStatus == 'Clean':
-            return '3' #means 'LEFT'
-        else:
-            return '4' #means 'SUCK'
+
 
 class SimpleReflexAgent(Agent): #USE THIS AGENt FOR SIMPLE RELFEX
     """This agent takes action based solely on the percept. [Fig. 2.13]"""
     #This Simple Reflex Agent will never stop because it only goes off of percept 
     #and has no memory of previous room being clean or not.
     
-    def __init__(self, rules, interpret_input):
+    def __init__(self):
         Agent.__init__(self)
         def program(percept): #percept function from vacuumenvironemtn "Returns the agent's location, and the location status (Dirty/Clean)."
             state = interpret_input(percept) #(loc_A, Dirty) tuple or (loc_B, CLean)
-            action = rule_match(state, rules)
-            #action = rule.action
+            action = rule_match(state)
+            
+
             return action
         self.program = program
         
         
-    # def interpret_input(percept):
-    #     location, spotStatus = percept
-    #     if location == loc_A and spotStatus =='Clean':
-    #     	return '1' #1 means 'RIGHT'
-    #     elif location == loc_A and spotStatus =='Dirty':
-    #    		return '2' #2 means 'SUCK'
-    #    	elif location == loc_B and spotStatus == 'Clean':
-    #    		return '3' #means 'LEFT'
-    #    	else:
-    #    		return '4' #means 'SUCK'
+        def interpret_input(percept):
+            location, spotStatus = percept #We split the tuple which contained our percept into location and spotStatus
+            
+            if location == loc_A and spotStatus =='Clean':
+                return '1' #1 means 'RIGHT'
+            elif location == loc_A and spotStatus =='Dirty':
+                return '2' #2 means 'SUCK'
+            elif location == loc_B and spotStatus == 'Clean':
+                return '3' #means 'LEFT'
+            else:
+                return '4' #means 'SUCK'
 
 
-
-    def rule_match(state, rules):
-		for rule in rules:
-			if state == 1:
+        def rule_match(state): #Function that matches our condition with an action.
+			if state == '1':
 				return 'Right'
-			elif state == 2:
+			elif state == '2':
 				return 'Suck'
-			elif state == 3:
+			elif state == '3':
 				return 'Left'
 			else:
 				return 'Suck'
-
-		
-
-#
-	
-
-
-	#def interpret_input(percept, rules):
-		#location, spotStatus = percept
-		#for rule in rules:
-		#	if location == (0,0) and 
 
 
 loc_A, loc_B = (0, 0), (1, 0) # The two locations for the Vacuum world
@@ -349,55 +324,36 @@ def test_agent(AgentFactory, steps, envs):
 
 #______________________________________________________________________________
 
-_docex = """
-a = ReflexVacuumAgent()
-a.program
-a.program((loc_A, 'Clean')) ==> 'Right'
-a.program((loc_B, 'Clean')) ==> 'Left'
-a.program((loc_A, 'Dirty')) ==> 'Suck'
-a.program((loc_A, 'Dirty')) ==> 'Suck'
-
-e = TrivialVacuumEnvironment()
-e.add_object(TraceAgent(ModelBasedVacuumAgent()))
-e.run(5)
-
-## Environments, and some agents, are randomized, so the best we can
-## give is a range of expected scores.  If this test fails, it does
-## not necessarily mean something is wrong.
-envs = [TrivialVacuumEnvironment() for i in range(100)]
-def testv(A): return test_agent(A, 4, copy.deepcopy(envs)) 
-testv(ModelBasedVacuumAgent)
-(7 < _ < 11) ==> True
-testv(ReflexVacuumAgent)
-(5 < _ < 9) ==> True
-testv(TableDrivenVacuumAgent)
-(2 < _ < 6) ==> True
-testv(RandomVacuumAgent)
-(0.5 < _ < 3) ==> True
-"""
 
 #The rules are supposed to be a set of condition-action rules, said in book
 
 
-print("**************************START OF PROGRAM*****************************")
+print("\n\n**************************START OF PROGRAM*****************************\n")
 print("AGENTS PERFORMANCE IS MEASURED BY POINTS: +10 Points for each dirty spot cleaned, -1 for each movement")
 print("\n")
 
-e = TrivialVacuumEnvironment()
-e.add_object(TraceAgent(ModelBasedVacuumAgent()))
-#we want SimpleReflexAgent, not ModelBasedVacuumAgent
-e.run(5)
+user_input1 = raw_input("Enter 'Dirty' or 'Clean' for location A: ") #Here we are entering the status' of each location.
+user_input2 = raw_input("Enter 'Dirty' or 'Clean' for location B: ")
+user_inputsteps = int(raw_input("Enter Number of Steps Agent runs for: "))
+user_inputroomsize = int(raw_input("Enter the integer size of the rooms: "))
+user_initLocation = raw_input("Enter 'A' or 'B' for the agent to start in room A or room B: ")
+# e = TrivialVacuumEnvironment() 
+# e.add_object(TraceAgent(ModelBasedVacuumAgent()))
+# #we want SimpleReflexAgent, not ModelBasedVacuumAgent
+# e.run(5)
 
-rules = ['Left', 'Right', 'Suck']
-e2 = TrivialVacuumEnvironment()
+print("\n\n**********************SIMPLE REFLEX AGENT****************************\n")
+#rules = ['Left', 'Right', 'Suck']
+e2 = TrivialVacuumEnvironment(user_input1, user_input2, user_initLocation, user_inputroomsize) #This is our environment we put our Simple Reflex Agent
 
-#e2.add_object(TraceAgent(SimpleReflexAgent(rules, interpret_input())))
-#e2.run(7)
+e2.add_object(TraceAgent(SimpleReflexAgent())) #Here we add our Simple Reflex Agent to our environment
+e2.run(user_inputsteps) #Now we run our environment
+print("\n")
 
 
-e3 = TrivialVacuumEnvironment()
-e3.add_object(TraceAgent(ReflexVacuumAgent()))
-e3.run(20)
+#e3 = TrivialVacuumEnvironment()
+#e3.add_object(TraceAgent(ReflexVacuumAgent()))
+#e3.run(20)
 
 print("\n***********************END OF PROGRAM*******************************")
 
